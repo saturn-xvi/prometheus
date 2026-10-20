@@ -98,6 +98,24 @@ string_rep* get_displayString_func(string_rep* a1, __int64 id, __int64 a3) {
 	return get_displayString_orig(a1, id, a3);
 }
 
+//Spawn points are the map entities with component 0x2E: 6 per spawn room (one per player), the rotation is the
+//direction to face. Takes the first one, so every map starts in the same room; false when the map has none. The
+//demo used to place the hero at a fixed spot in a Hanamura spawn room, which is off the map everywhere else.
+static bool find_spawn_point(Vector4& position, Vector4& rotation) {
+	Entity* first = nullptr;
+	for (auto ent : *GameEntityAdmin()) {
+		if (ent->getById<ComponentBase>(0x2E) && ent->getById<Component_1_SceneRendering>(1) && (!first || ent->entity_id < first->entity_id))
+			first = ent;
+	}
+	if (!first)
+		return false;
+	auto sr = first->getById<Component_1_SceneRendering>(1);
+	position = sr->position;
+	position.W = 0;
+	rotation = sr->rotation; //Quaternion, which is what Component_2F_LocalPlayer::SetRotation takes (0xca6fb0)
+	return true;
+}
+
 void play_game_btn() {
 	PrometheusSystem::instance()->demo_join_game = true;
 }
@@ -445,12 +463,13 @@ void PrometheusSystem::OnTick(float tick) {
 			cv.type = StatescriptPrimitive_BYTE;
 			cv.value = 1;
 			ss->ss_inner.rid_entity_varbag->SetVar({ StatescriptVar_ENTITY_VARBAG, 0x0D800000000000FD }, cv);*/
-			if (globals::isDemo) {
+			Vector4 spawn_pos{}, spawn_rot{};
+			if (globals::isDemo && find_spawn_point(spawn_pos, spawn_rot)) {
 				auto localplayer = controller->getById<Component_2F_LocalPlayer>(0x2F);
-				localplayer->SetRotation(Vector4(0.000000, -0.713039, 0.000000, 0));
+				localplayer->SetRotation(spawn_rot);
 				auto comp = model->getById<__int64>(0x15);
 				if (comp) {
-					*((Vector4*)((__int64)comp + 0xC70)) = Vector4(108.336914, 0.999023, 0.142578, 0);
+					*((Vector4*)((__int64)comp + 0xC70)) = spawn_pos;
 					//Is inside MovementState, i need to finisht the demo this is ugly ;(
 				}
 			}
