@@ -2,6 +2,15 @@
 #include <vector>
 #include "entity_admin.h"
 
+//Entity to spawn for a hero. STUHero::m_gameplayEntity is the hero's base entity, but D.Va's is her pilot
+//(0x40A); she starts a life in her mech, 0x407 (mech model 0x11CE, Fusion Cannons 0x50A, mech ability scripts),
+//which only the server knew to spawn.
+inline __int64 hero_spawn_entity(__int64 hero_id, __int64 gameplay_entity) {
+	constexpr __int64 HERO_DVA = 0x02E000000000007A;
+	constexpr __int64 DVA_MECH = 0x0400000000000407;
+	return hero_id == HERO_DVA ? DVA_MECH : gameplay_entity;
+}
+
 class player_spawner {
 public:
 	struct spawn_info {
